@@ -1,0 +1,507 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+:root {
+    --primary: #00441b;
+    --accent: #c5a059;
+    --white: #ffffff;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+body {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: url('eep.jpeg') center/cover no-repeat fixed;
+    overflow-x: hidden;
+}
+
+.overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1;
+}
+
+.container {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: none !important; 
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centraliza tudo horizontalmente */
+}
+
+header { text-align: center; color: white; margin-bottom: 25px; width: 100%; }
+header h1 { font-size: 1.4rem; border-bottom: 2px solid var(--accent); padding-bottom: 10px; }
+
+/* CARDS */
+.card {
+    background: var(--white);
+    padding: 40px; /* Mais respiro para ficar elegante */
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    width: 100%;
+    max-width: 450px; /* Tamanho ideal para login */
+    display: none;
+    flex-direction: column;
+    margin: 0 auto;
+}
+#login-prof { display: flex; }
+
+.card h2 { color: var(--primary); margin-bottom: 20px; text-align: center; }
+
+.form-group { width: 100%; margin-bottom: 15px; }
+
+label {
+    display: block;
+    color: var(--primary);
+    font-weight: 600;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+}
+
+input, select {
+    width: 100%;
+    height: 45px;
+    padding: 0 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+
+.input-icon-wrapper { position: relative; }
+
+.toggle-eye {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+}
+
+/* BOTÕES */
+.btn-primary {
+    width: 100%;
+    height: 50px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.btn-voltar {
+    width: 100%;
+    background: #f0f0f0;
+    border: none;
+    padding: 12px;
+    margin-top: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.form-footer { margin-top: 20px; text-align: center; }
+.form-footer a { color: var(--primary); text-decoration: none; font-weight: 600; }
+
+/* PAINEL */
+.main-content-admin {
+    width: 100%;
+    max-width: 1300px; /* 🔥 aumenta o espaço geral */
+    margin: 80px auto 0;
+    padding: 20px;
+}
+
+/* HEADER */
+.admin-header-center {
+    text-align: center;
+    color: white;
+    margin-bottom: 40px;
+}
+
+.panel-title {
+    font-size: 2.2rem;
+}
+
+/* CARD PÁGINA */
+/* Ajuste do Card para expandir conforme a tabela */
+/* CARD DE PÁGINA INTEIRA (Para as Tabelas) */
+.card-pag-inteira {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    width: fit-content; 
+    min-width: 600px;
+    max-width: 95vw;
+    margin: 20px auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.tabela-responsiva table {
+    width: auto; /* Deixa a tabela assumir sua largura natural */
+    min-width: 600px; /* Largura mínima para não ficar espremida */
+    border-collapse: collapse;
+    background: #fff;
+    border: 1px solid #000;
+}
+
+.tabela-responsiva th, 
+.tabela-responsiva td {
+    border: 1px solid #000;
+    padding: 12px 20px;
+    text-align: center;
+    white-space: nowrap; /* Garante que a tabela fique larga como você quer */
+}
+/* ZEBRADO */
+.tabela-responsiva tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.tabela-responsiva tr:nth-child(odd) {
+    background-color: #ffffff;
+}
+
+/* HOVER */
+.tabela-responsiva tr:hover {
+    background-color: #dfe6e9;
+    transition: 0.2s;
+}
+
+/* BOTÃO PDF */
+.rodape-acoes {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.btn-pdf {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* MENU */
+.menu-icon {
+    position: fixed;
+    top: 25px;
+    left: 25px;
+    z-index: 1001;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.menu-icon span {
+    width: 30px;
+    height: 4px;
+    background-color: #c5a059;
+    border-radius: 2px;
+}
+
+/* --- MENU LATERAL (SIDEBAR) REESTILIZADO --- */
+
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: -260px;
+    width: 260px;
+    height: 100%;
+    background-color: #003214; /* Mantendo seu tom de verde */
+    transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
+    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar.active { 
+    left: 0; 
+}
+
+/* Container que segura o ícone e o texto na Sidebar */
+.sidebar-header {
+    padding: 20px;
+    display: flex;
+    align-items: center; /* Alinha verticalmente no centro */
+    gap: 15px;           /* Dá um espaço automático entre o ícone e a palavra */
+    color: #c5a059;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(197, 160, 89, 0.3);
+}
+.sidebar ul { 
+    list-style: none; 
+    padding: 0;
+}
+
+.sidebar ul li {
+    padding: 16px 25px;
+    color: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    
+    /* Linha divisória entre os itens */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05); 
+    
+    display: flex;
+    align-items: center;
+}
+
+/* Efeito ao passar o mouse */
+.sidebar ul li:hover {
+    background: rgba(197, 160, 89, 0.15); /* Fundo sutil */
+    color: #c5a059; /* Texto muda para o dourado */
+    padding-left: 35px; /* Leve deslocamento para a direita */
+}
+
+/* Destaque para o botão SAIR no final */
+.sidebar ul li:last-child {
+    border-bottom: none;
+    margin-top: 20px;
+    color: #ff6b6b; /* Cor de alerta para o sair */
+}
+
+.sidebar ul li:last-child:hover {
+    background: rgba(255, 107, 107, 0.1);
+    color: #ff4747;
+}
+
+/* Ajuste o ícone para não ser 'fixed' quando estiver dentro da sidebar, 
+   ou ajuste a posição dele */
+.menu-icon {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1001;
+    transition: 0.3s;
+}
+
+.sidebar.active ~ .menu-icon {
+    left: 280px;
+}
+
+.sidebar-header {
+    padding-top: 60px;
+}
+
+.menu-icon span {
+    width: 30px;
+    height: 4px;
+    background-color: #c5a059;
+    border-radius: 2px;
+}
+
+/* Se quiser que o ícone mude de cor ou posição quando o menu abre */
+.sidebar.active ~ .menu-icon span {
+    background-color: #ffffff;
+}
+
+/* TELAS */
+.tela-admin {
+    width: 100%;
+    display: none;
+    animation: fadeIn 0.3s ease-in;
+}
+
+/* ANIMAÇÃO */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px);}
+    to { opacity: 1; transform: translateY(0);}
+}
+/* Remove a linha apenas dos cards de login e cadastro */
+.card h1, .card h2, .card h3 {
+    border-bottom: none !important;
+}
+
+/* Se a linha estiver no header geral, podemos esconder assim no login: */
+#login-prof header, #login-admin header {
+    border-bottom: none;
+}
+
+.card, .card-cadastro { 
+    background: var(--white);
+    padding: 35px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    
+    width: 100%;
+    max-width: 400px; /* trava o tamanho para não esticar */
+    
+    margin: 20px auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.admin-header-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    width: 100%;
+}
+
+.panel-title {
+    font-size: 2.2rem;
+    width: fit-content;
+    margin: 0 auto;
+}
+
+.card-form {
+    background: var(--white);
+    padding: 35px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    
+    width: 100%;
+    max-width: 450px; /* Largura ideal para formulários */
+    
+    margin: 20px auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+/* Garante que os inputs dentro do card ocupem a largura toda dele */
+.card-form .form-group, 
+.card-form input, 
+.card-form select,
+.card-form .btn-primary {
+    width: 100%;
+}
+
+/* --- LIMPEZA DE LINHAS E TÍTULOS --- */
+header h1, .panel-title, .card-form h3, .card-form h2 {
+    border-bottom: none !important;
+    margin-bottom: 15px;
+}
+
+/* TÍTULOS DENTRO DOS CARDS */
+.card-form h3, .card-form h2 {
+    color: var(--primary);
+    margin-bottom: 25px;
+    text-align: center;
+    border-bottom: none !important;
+}
+
+/* --- O SEGREDO DO ALINHAMENTO --- */
+.form-group {
+    width: 100%;        /* Faz o grupo ocupar a largura total do card */
+    margin-bottom: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* Alinha o LABEL à esquerda */
+}
+
+/* AJUSTE DOS LABELS (Nomes dos campos) */
+.form-group label {
+    display: block;
+    color: var(--primary);
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+    text-align: left;    /* Garante alinhamento à esquerda */
+    width: 100%;
+}
+
+/* AJUSTE DOS INPUTS E SELECTS (Comprimento total) */
+.card-form input, 
+.card-form select {
+    width: 100% !important; /* Faz o campo preencher o card */
+    height: 48px;
+    padding: 0 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: #fff;
+    display: block;
+}
+
+/* BOTÃO SALVAR (Também comprido) */
+.card-form .btn-primary {
+    width: 100%;
+    height: 50px;
+    margin-top: 15px;
+}
+
+td button {
+    padding: 6px 10px;
+    font-size: 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin: 2px;
+}
+
+/* BOTÃO ATUALIZAR */
+td button:last-child {
+    background-color: #ec0d0d;
+    color: white;
+}
+
+/* HOVER */
+td button:hover {
+    transform: scale(1.1);
+}
+
+.btn-refresh {
+    padding: 8px 12px;
+    font-size: 18px;
+    background-color: #0a7cff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-left: 4px;
+}
+
+.btn-refresh:hover {
+    background-color: #095ec9;
+    transform: scale(1.1);
+}
+.rodape-acoes {
+    display: flex;
+    gap: 12px; /* espaço entre os botões */
+    margin-top: 15px;
+}
+
+.overlay {
+    pointer-events: none;
+}
+
+.btn-voltar {
+    background: transparent;
+    border: none;
+    color: var(--primary);
+    text-decoration: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1.2rem; /* Tamanho ajustado para ser bem visível */
+    margin-top: 20px;
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+}
+
+/* Forçamos que nada mude no hover */
+.btn-voltar:hover {
+    color: var(--primary);
+    background: transparent;
+    border: none;
+    outline: none;
+}

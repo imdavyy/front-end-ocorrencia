@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Ocorrências - EEEP PADRE JOÃO BOSCO DE LIMA</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<script>
+// ==================== Funções de exibição ====================
+function mostrarTela(id){
+    const telas = [
+        "login-prof",
+        "cadastro-prof",
+        "login-admin",
+        "cadastro-admin",
+        "cadastrar-turma",
+        "ver-turmas-admin",
+        "painel-admin",
+        "painel-professor",
+        "painel-interno"
+    ];
+
+    telas.forEach(t => {
+        const el = document.getElementById(t);
+        if(el) el.style.display = "none";
+    });
+
+    if(id){
+    const tela = document.getElementById(id);
+    if(tela) tela.style.display = "flex";
+}
+
+    if(id === "cadastro-prof"){
+        carregarDisciplinasNoSelect();
+    }
+}
+function toggleSenha(id){
+    const input = document.getElementById(id);
+    input.type = input.type === "password" ? "text" : "password";
+}
+
+// ==================== Cadastrar / Login ====================
+async function cadastrarTurma(event){
+    event.preventDefault();
+    const descricao = document.getElementById("descricao").value.trim();
+    if(!descricao) { alert("Digite a descrição da turma"); return; }
+
+    try {
+        const resposta = await fetch("http://localhost:3000/turma", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ descricao })
+        });
+        if(resposta.ok){
+    alert("Turma cadastrada com sucesso!");
+    document.getElementById("descricao").value = "";
+
+    // 🔥 GARANTE QUE O PAINEL APAREÇA
+    mostrarTela('painel-interno');
+
+    // 🔥 ABRE A TELA DE TURMAS
+    navegarPara('tela-ver-turmas');
+}
+       else {
+            const erro = await resposta.json();
+            alert("Erro ao cadastrar turma: " + (erro.erro || resposta.statusText));
+        }
+    } catch(erro){
+        console.error(erro);
+        alert("Erro ao conectar com a API");
+    }
+}
+
+// Função de cadastro professor revisada
+async function cadastrarNovoProfessor(event){
+    event.preventDefault();
+
+const nome = document.getElementById("reg-nome").value.trim();
+const email = document.getElementById("reg-email").value.trim();
+const senha = document.getElementById("reg-senha").value.trim();
+const id_disciplina = document.getElementById("adm-prof-disciplina").value;
+
+
+    try {
+        const resposta = await fetch("http://localhost:3000/professor", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ nome, email, senha, id_disciplina })
+        });
+
+        if(resposta.ok){
+            alert("Professor cadastrado com sucesso!");
+            limparCamposProfessor();
+            mostrarTela('login-prof');
+        } else {
+            const erro = await resposta.json();
+            alert("Erro ao cadastrar professor: " + (erro.erro || resposta.statusText));
+        }
+    } catch(erro){
+        console.error(erro);
+        alert("Erro ao conectar com a API");
+    }
+}
+
+// Função de cadastro administrador revisada
+async function cadastrarAdministrador(event){
+    event.preventDefault();
+    const nome = document.getElementById("adm-nome").value.trim();
+    const email = document.getElementById("adm-email").value.trim();
+    const senha = document.getElementById("adm-senha").value.trim();
+
+    if(!nome || !email || !senha){ alert("Preencha todos os campos"); return; }
+
+    try {
+        const resposta = await fetch("http://localhost:3000/administrador", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ nome, email, senha })
+        });
+
+        if(resposta.ok){
+            alert("Administrador cadastrado com sucesso!");
+            limparCamposAdmin();
+            mostrarTela('login-admin');
+        } else {
+            const erro = await resposta.json();
+            alert("Erro: " + erro.erro);
+        }
+    } catch(erro){
+        console.error(erro);
+        alert("Erro ao conectar com a API");
+    }
+}
+
+async function realizarLogin(event, tipo) {
+    event.preventDefault();
+
+    let email, senha;
+
+    if (tipo === "professor") {
+        email = document.getElementById("login-email").value.trim();
+        senha = document.getElementById("login-senha").value.trim();
+    } else {
+        email = document.getElementById("login-email-admin").value.trim();
+        senha = document.getElementById("login-senha-admin").value.trim();
+    }
+
+    if (!email || !senha) {
+        alert("Preencha todos os campos");
+        return;
+    }
+
+    const rota = tipo === "professor"
+        ? "http://localhost:3000/professor/login"
+        : "http://localhost:3000/administrador/login";
+
+    try {
+        const resposta = await fetch(rota, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, senha })
+        });
+
+        const data = await resposta.json().catch(() => null);
+
+        console.log("STATUS:", resposta.status);
+        console.log("RESPOSTA:", data);
+
+        if (!resposta.ok) {
+            alert(data?.erro || "Erro no login");
+            return;
+        }
+
+        // 🔥 ESCONDE TUDO (inclusive cards)
+        document.querySelectorAll(".card").forEach(el => el.style.display = "none");
+
+        document.getElementById("painel-interno").style.display = "none";
+        document.getElementById("painel-professor").style.display = "none";
+        document.getElementById("main-container").style.display = "block";
+        // =========================
+        // 🔥 PROFESSOR
+        // =========================
+        if (tipo === "professor") {
+    const painel = document.getElementById("painel-professor");
+    painel.style.display = "flex"; // Use flex para manter o layout
+
+    const nome = data?.professor?.nome || "Professor";
+    document.getElementById("nome-professor").textContent = nome;
+
+    // Resetar telas do professor
+    document.querySelectorAll(".tela-prof").forEach(t => t.style.display = "none");
+    document.getElementById("tela-prof-inicio").style.display = "block";
+    
+    // Garante que o menu comece fechado no mobile
+    const menu = document.getElementById("menu-lateral-prof");
+    if (menu) menu.classList.remove("active");
+}
+
+        // =========================
+        // 🔥 ADMIN
+        // =========================
+        else {
+
+            const painel = document.getElementById("painel-interno");
+            painel.style.display = "flex";
+
+            const nome = data?.administrador?.nome || "Administrador";
+            document.getElementById("nome-usuario").textContent = nome;
+
+            // Reset telas admin
+            document.querySelectorAll(".tela-admin").forEach(t => t.style.display = "none");
+
+            document.getElementById("tela-inicio").style.display = "block";
+        }
+
+    } catch (erro) {
+        console.error("Erro real:", erro);
+        alert("Erro de conexão com o servidor");
+    }
+}
+
+// ==================== Mostrar Turmas Admin ====================
+async function mostrarTurmasAdmin() {
+    console.log("🔄 Atualizando turmas (admin)...");
+
+    const tbody = document.getElementById("corpo-tabela-turmas");
+
+    if (!tbody) {
+        console.error("Tabela de turmas não encontrada!");
+        return;
+    }
+
+    tbody.innerHTML = "<tr><td colspan='3'>Carregando...</td></tr>";
+
+    try {
+        const res = await fetch("http://localhost:3000/turma");
+        const turmas = await res.json();
+
+        tbody.innerHTML = "";
+
+        if (!turmas.length) {
+            tbody.innerHTML = "<tr><td colspan='3'>Nenhuma turma encontrada</td></tr>";
+            return;
+        }
+
+        turmas.forEach(t => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${t.id_turma}</td>
+                    <td>${t.descricao}</td>
+                    <td>
+                        <button onclick="editarTurma(${t.id_turma}, '${t.descricao}')">✏️</button>
+                        <button onclick="deletarTurma(${t.id_turma})">🗑️</button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        console.log("✅ Turmas atualizadas!");
+
+    } catch (e) {
+        console.error(e);
+        tbody.innerHTML = "<tr><td colspan='3'>Erro ao carregar turmas</td></tr>";
+    }
+}
+async function deletarTurma(id){
+    if(!confirm("Deseja realmente deletar esta turma?")) return;
+    try {
+        const resposta = await fetch(`http://localhost:3000/turma/${id}`, { method: "DELETE" });
+        if(resposta.ok){
+            alert("Turma deletada");
+            mostrarTurmasAdmin();
+        } else alert("Erro ao deletar turma");
+    } catch(erro){
+        console.error(erro);
+        alert("Erro ao conectar com a API");
+    }
+}
+
+// ==================== Funções de cadastro ====================
+
+// Limpa os campos de cadastro de professor
+function limparCamposProfessor() {
+    document.getElementById("reg-nome").value = "";
+    document.getElementById("reg-email").value = "";
+    document.getElementById("reg-disciplina").value = "";
+    document.getElementById("reg-senha").value = "";
+}
+
+// Limpa os campos de cadastro de administrador
+function limparCamposAdmin() {
+    document.getElementById("adm-nome").value = "";
+    document.getElementById("adm-email").value = "";
+    document.getElementById("adm-senha").value = "";
+}
+
+async function carregarTodasAsDisciplinas() {
+    try {
+        const res = await fetch("http://localhost:3000/disciplina");
+        const disciplinas = await res.json();
+        
+        // IDs de todos os selects de disciplina que você tem no HTML
+        const selects = ["adm-prof-disciplina", "adm-prof-disciplina-painel"];
+        
+        selects.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.innerHTML = '<option value="">Selecione a disciplina...</option>';
+                disciplinas.forEach(d => {
+                    el.innerHTML += `<option value="${d.id_disciplina}">${d.descricao}</option>`;
+                });
+            }
+        });
+    } catch (e) { 
+        console.error("Erro ao carregar disciplinas", e); 
+    }
+}
+
+function abrirTurmasAdmin(){
+    mostrarTela('ver-turmas-admin');
+    mostrarTurmasAdmin();
+}
+
+async function gerarPDFTurmasAdmin() {
+    try {
+        // Pega as turmas do backend
+        const resposta = await fetch("http://localhost:3000/turma");
+        const turmas = await resposta.json();
+
+        // Cria o PDF
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        doc.setFontSize(18);
+        doc.text("Relatório de Turmas", 14, 20);
+
+        // Cabeçalho da tabela
+        const headers = [["ID", "Descrição"]];
+
+        // Dados
+        const data = turmas.map(t => [t.id_turma, t.descricao]);
+
+        // Usando autoTable para tabela no PDF
+        if (doc.autoTable) {
+            doc.autoTable({
+                head: headers,
+                body: data,
+                startY: 30
+            });
+        } else {
+            // Se autoTable não estiver carregado, faz manual
+            let y = 30;
+            doc.setFontSize(12);
+            doc.text("ID   Descrição", 14, y);
+            y += 10;
+            data.forEach(row => {
+                doc.text(`${row[0]}   ${row[1]}`, 14, y);
+                y += 10;
+            });
+        }
+
+        doc.save("turmas.pdf");
+
+    } catch (erro) {
+        console.error(erro);
+        alert("Erro ao gerar PDF das turmas");
+    }
+}
+
+async function editarTurma(id, descricaoAtual){
+    const novaDescricao = prompt("Digite a nova descrição:", descricaoAtual);
+
+    if(!novaDescricao || novaDescricao.trim() === "") return;
+
+    try {
+        const resposta = await fetch(`http://localhost:3000/turma/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ descricao: novaDescricao })
+        });
+
+        if(resposta.ok){
+            alert("Turma atualizada!");
+            mostrarTurmasAdmin();
+        } else {
+            alert("Erro ao atualizar turma");
+        }
+    } catch(erro){
+        console.error(erro);
+        alert("Erro na conexão");
+    }
+}
+
+// ====== CONTROLE DO MENU LATERAL ======
+function toggleMenu() {
+    const menuAdmin = document.getElementById("menu-lateral");
+    const menuProf = document.getElementById("menu-lateral-prof");
+
+    const painelAdmin = document.getElementById("painel-interno");
+    const painelProf = document.getElementById("painel-professor");
+
+    // MENU DO ADMIN
+    if (menuAdmin && painelAdmin && painelAdmin.style.display !== "none") {
+        menuAdmin.classList.toggle("active");
+    }
+
+    // MENU DO PROFESSOR
+    if (menuProf && painelProf && painelProf.style.display !== "none") {
+        menuProf.classList.toggle("active");
+    }
+}
+async function carregarTabelaProfessores() {
+    console.log("🔄 Atualizando professores...");
+
+    const tbody = document.getElementById("corpo-tabela-professores");
+
+    if (!tbody) {
+        console.error("Tabela de professores não encontrada!");
+        return;
+    }
+
+    tbody.innerHTML = "<tr><td colspan='5'>Carregando...</td></tr>";
+
+    try {
+        const res = await fetch("http://localhost:3000/professor");
+        const dados = await res.json();
+
+        tbody.innerHTML = "";
+
+        if (!dados.length) {
+            tbody.innerHTML = "<tr><td colspan='5'>Nenhum professor encontrado</td></tr>";
+            return;
+        }
+
+        dados.forEach(p => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${p.id_professor}</td>
+                    <td>${p.nome}</td>
+                    <td>${p.email}</td>
+                    <td>${p.nome_disciplina || 'Geral'}</td>
+                    <td>
+                        <button onclick="editarProfessor(${p.id_professor}, '${p.nome}', '${p.email}', ${p.id_disciplina})">✏️</button>
+                        <button onclick="deletarProfessor(${p.id_professor})">🗑️</button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        console.log("✅ Professores atualizados!");
+
+    } catch (e) {
+        console.error(e);
+        tbody.innerHTML = "<tr><td colspan='5'>Erro ao carregar professores</td></tr>";
+    }
+}
+
+// Cadastro via Painel Admin
+async function cadastrarProfessorAdmin(event) {
+    event.preventDefault();
+    
+    const nome = document.getElementById("adm-prof-nome").value.trim();
+    const email = document.getElementById("adm-prof-email").value.trim();
+    const id_disciplina = document.getElementById("adm-prof-disciplina-painel").value;
+    const senha = document.getElementById("adm-prof-senha").value.trim();
+
+    console.log("Dados:", { nome, email, id_disciplina, senha });
+
+    // VALIDAÇÃO CORRETA
+    if (!nome || !email || !senha || id_disciplina === "") {
+        alert("Preencha todos os campos!");
+        return;
+    }
+
+    try {
+        const res = await fetch("http://localhost:3000/professor", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                nome, 
+                email, 
+                senha, 
+                id_disciplina: Number(id_disciplina) 
+            })
+        });
+
+        const dadosResposta = await res.json();
+
+        if (res.ok) {
+            alert("Professor cadastrado com sucesso!");
+            event.target.reset(); 
+
+            // FORÇA ATUALIZAÇÃO
+            navegarPara('tela-ver-professores');
+            carregarTabelaProfessores();
+
+        } else {
+            alert("Erro: " + (dadosResposta.erro || "Falha no cadastro"));
+        }
+
+    } catch (e) { 
+        console.error("Erro:", e);
+        alert("Erro de conexão com servidor."); 
+    }
+}
+
+function sairAdmin(){
+    mostrarTela('login-prof');
+    document.getElementById("menu-lateral").style.left = "-220px";
+}
+
+// ====== CRUD DISCIPLINAS ======
+
+// 1. Cadastrar
+// 1. Cadastrar Disciplina
+async function cadastrarDisciplina(event) {
+    event.preventDefault();
+
+    const valor = document.getElementById("disc-descricao").value;
+
+    if (!valor) {
+        alert("Selecione uma disciplina!");
+        return;
+    }
+
+    try {
+        const res = await fetch("http://localhost:3000/disciplina", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                descricao: valor
+            })
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok) {
+            alert("Disciplina cadastrada com sucesso!");
+            document.getElementById("disc-descricao").value = "";
+            carregarTabelaDisciplinas();
+        } else {
+            alert("Erro: " + (data.erro || "Erro desconhecido"));
+        }
+
+    } catch (e) {
+        console.error(e);
+        alert("Erro ao conectar com a API");
+    }
+}
+// 2. Listar
+async function carregarTabelaDisciplinas() {
+    console.log("🔄 Atualizando disciplinas...");
+
+    const tbody = document.getElementById("corpo-tabela-disciplinas");
+
+    if (!tbody) {
+        console.error("Tabela de disciplinas não encontrada!");
+        return;
+    }
+
+    tbody.innerHTML = "<tr><td colspan='3'>Carregando...</td></tr>";
+
+    try {
+        const res = await fetch("http://localhost:3000/disciplina");
+        const dados = await res.json();
+
+        tbody.innerHTML = "";
+
+        if (!dados.length) {
+            tbody.innerHTML = "<tr><td colspan='3'>Nenhuma disciplina encontrada</td></tr>";
+            return;
+        }
+
+        dados.forEach(d => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${d.id_disciplina}</td>
+                    <td>${d.descricao}</td>
+                    <td>
+                        <button onclick="editarDisciplina(${d.id_disciplina}, '${d.descricao}')">✏️</button>
+                        <button onclick="deletarDisciplina(${d.id_disciplina})">🗑️</button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        console.log("✅ Disciplinas atualizadas!");
+
+    } catch (e) {
+        console.error(e);
+        tbody.innerHTML = "<tr><td colspan='3'>Erro ao carregar disciplinas</td></tr>";
+    }
+}
+
+// 3. Deletar
+async function deletarDisciplina(id) {
+    if (!confirm("Tem certeza? Isso pode afetar professores vinculados!")) return;
+    try {
+        const res = await fetch(`http://localhost:3000/disciplina/${id}`, { method: "DELETE" });
+        if (res.ok) {
+            alert("Disciplina removida!");
+            carregarTabelaDisciplinas();
+        } else {
+            alert("Não é possível excluir: existem professores vinculados a esta disciplina.");
+        }
+    } catch (e) { alert("Erro de conexão"); }
+}
+
+// 4. Editar (Atualizar)
+async function editarDisciplina(id, descricaoAtual) {
+    const novaDesc = prompt("Novo nome da disciplina:", descricaoAtual);
+    if (!novaDesc || novaDesc.trim() === "") return;
+
+    try {
+        const res = await fetch(`http://localhost:3000/disciplina/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ descricao: novaDesc }) // AQUI TAMBÉM
+        });
+
+        if (res.ok) {
+            alert("Atualizado com sucesso!");
+            carregarTabelaDisciplinas();
+        }
+    } catch (e) { alert("Erro ao atualizar"); }
+}
+
+// ATUALIZE sua função navegarPara para incluir o carregamento automático:
+function navegarPara(idTela) {
+    console.log("Navegando para:", idTela);
+
+    const telas = document.querySelectorAll('.tela-admin');
+
+    telas.forEach(t => {
+        t.style.display = 'none';
+    });
+
+    const telaAlvo = document.getElementById(idTela);
+
+    if (!telaAlvo) {
+        console.error("Tela não encontrada:", idTela);
+        return;
+    }
+
+    telaAlvo.style.display = 'block';
+
+    // CARREGAMENTOS AUTOMÁTICOS
+    if (idTela === 'tela-ver-turmas') {
+        mostrarTurmasAdmin();
+    }
+
+    if (idTela === 'tela-ver-professores') {
+        carregarTabelaProfessores();
+    }
+
+    if (idTela === 'tela-ver-disciplinas') {
+        carregarTabelaDisciplinas();
+    }
+
+    if (idTela === 'tela-cadastrar-prof') {
+        carregarTodasAsDisciplinas();
+    }
+
+    if (idTela === 'tela-ver-admins') {
+    carregarTabelaAdmins();
+}
+
+    document.getElementById("menu-lateral").classList.remove("active");
+}
+
+async function gerarPDFDisciplinas() {
+    try {
+        const resposta = await fetch("http://localhost:3000/disciplina");
+        const disciplinas = await resposta.json();
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        doc.setFontSize(18);
+        doc.text("Relatório de Disciplinas", 14, 20);
+
+        const headers = [["ID", "Nome"]];
+
+        const data = disciplinas.map(d => [
+            d.id_disciplina,
+            d.descricao
+        ]);
+
+        if (doc.autoTable) {
+            doc.autoTable({
+                head: headers,
+                body: data,
+                startY: 30
+            });
+        } else {
+            let y = 30;
+            doc.setFontSize(12);
+            doc.text("ID   Nome", 14, y);
+            y += 10;
+
+            data.forEach(row => {
+                doc.text(`${row[0]}   ${row[1]}`, 14, y);
+                y += 10;
+            });
+        }
+
+        doc.save("disciplinas.pdf");
+
+    } catch (erro) {
+        console.error(erro);
+        alert("Erro ao gerar PDF das disciplinas");
+    }
+}
+
+async function editarProfessor(id, nomeAtual, emailAtual, idDisciplinaAtual) {
+    const novoNome = prompt("Novo nome:", nomeAtual);
+    if (!novoNome) return;
+
+    const novoEmail = prompt("Novo email:", emailAtual);
+    if (!novoEmail) return;
+
+    const novaDisciplina = prompt("Novo ID da disciplina:", idDisciplinaAtual);
+    if (!novaDisciplina) return;
+
+    try {
+        const resposta = await fetch(`http://localhost:3000/professor/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                nome: novoNome,
+                email: novoEmail,
+                id_disciplina: Number(novaDisciplina)
+            })
+        });
+
+        if (resposta.ok) {
+            alert("Professor atualizado com sucesso!");
+            carregarTabelaProfessores();
+        } else {
+            const erro = await resposta.json();
+            alert("Erro: " + erro.erro);
+        }
+
+    } catch (erro) {
+        console.error(erro);
+        alert("Erro ao conectar com a API");
+    }
+}
+
+async function cadastrarAdminPainel(event){
+    event.preventDefault();
+
+    const nome = document.getElementById("adm-nome-painel").value.trim();
+    const email = document.getElementById("adm-email-painel").value.trim();
+    const senha = document.getElementById("adm-senha-painel").value.trim();
+
+    if(!nome || !email || !senha){
+        alert("Preencha todos os campos!");
+        return;
+    }
+
+    try {
+        const res = await fetch("http://localhost:3000/administrador", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ nome, email, senha })
+        });
+
+        const data = await res.json();
+
+        if(res.ok){
+            alert("Administrador cadastrado!");
+            event.target.reset();
+
+            navegarPara('tela-ver-admins');
+            carregarTabelaAdmins();
+        } else {
+            alert("Erro: " + data.erro);
+        }
+
+    } catch(e){
+        console.error(e);
+        alert("Erro de conexão com API");
+    }
+}
+
+async function carregarTabelaAdmins() {
+    console.log("🔄 Atualizando administradores...");
+
+    const tbody = document.getElementById("corpo-tabela-admins");
+
+    if (!tbody) {
+        console.error("Tabela de administradores não encontrada!");
+        return;
+    }
+
+    tbody.innerHTML = "<tr><td colspan='4'>Carregando...</td></tr>";
+
+    try {
+        const res = await fetch("http://localhost:3000/administrador");
+        const dados = await res.json();
+
+        tbody.innerHTML = "";
+
+        if (!dados.length) {
+            tbody.innerHTML = "<tr><td colspan='4'>Nenhum administrador encontrado</td></tr>";
+            return;
+        }
+
+        dados.forEach(a => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${a.id_administrador}</td>
+                    <td>${a.nome}</td>
+                    <td>${a.email}</td>
+                    <td>
+                        <button onclick="editarAdmin(${a.id_administrador}, '${a.nome}', '${a.email}')">✏️</button>
+                        <button onclick="deletarAdmin(${a.id_administrador})">🗑️</button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        console.log("✅ Administradores atualizados!");
+
+    } catch (e) {
+        console.error(e);
+        tbody.innerHTML = "<tr><td colspan='4'>Erro ao carregar administradores</td></tr>";
+    }
+}
+
+async function gerarPDFAdmins(){
+    try {
+        const res = await fetch("http://localhost:3000/administrador");
+        const admins = await res.json();
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        doc.setFontSize(18);
+        doc.text("Relatório de Administradores", 14, 20);
+
+        const headers = [["ID", "Nome", "Email"]];
+
+        const data = admins.map(a => [
+            a.id_administrador,
+            a.nome,
+            a.email
+        ]);
+
+        doc.autoTable({
+            head: headers,
+            body: data,
+            startY: 30
+        });
+
+        doc.save("administradores.pdf");
+
+    } catch(e){
+        console.error(e);
+        alert("Erro ao gerar PDF");
+    }
+}
+async function editarAdmin(id, nomeAtual, emailAtual){
+    const novoNome = prompt("Novo nome:", nomeAtual);
+    if(!novoNome) return;
+
+    const novoEmail = prompt("Novo email:", emailAtual);
+    if(!novoEmail) return;
+
+    try {
+        const res = await fetch(`http://localhost:3000/administrador/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                nome: novoNome,
+                email: novoEmail
+            })
+        });
+
+        const data = await res.json();
+
+        if(res.ok){
+            alert("Administrador atualizado!");
+            carregarTabelaAdmins();
+        } else {
+            alert("Erro: " + data.erro);
+        }
+
+    } catch(e){
+        console.error(e);
+        alert("Erro de conexão");
+    }
+}
+
+function sairProfessor(){
+    document.getElementById("painel-professor").style.display = "none";
+    document.getElementById("login-prof").style.display = "flex";
+}
+
+function navegarProfessor(telaId){
+    const telas = document.querySelectorAll('.tela-prof');
+
+    telas.forEach(t => t.style.display = "none");
+
+    document.getElementById(telaId).style.display = "block";
+
+    if(telaId === "tela-prof-turmas"){
+        mostrarTurmasProfessor();
+    }
+}
+
+async function mostrarTurmasProfessor() {
+    console.log("🔄 Atualizando turmas do professor...");
+
+    const tbody = document.getElementById("corpo-tabela-turmas-prof");
+
+    if (!tbody) {
+        console.error("Tabela do professor não encontrada!");
+        return;
+    }
+
+    tbody.innerHTML = "<tr><td colspan='2'>Carregando...</td></tr>";
+
+    try {
+        const res = await fetch("http://localhost:3000/turma");
+        const turmas = await res.json();
+
+        tbody.innerHTML = "";
+
+        turmas.forEach(t => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${t.id_turma}</td>
+                    <td>${t.descricao}</td>
+                </tr>
+            `;
+        });
+
+        console.log("✅ Atualizado com sucesso (prof)");
+
+    } catch (e) {
+        console.error(e);
+        tbody.innerHTML = "<tr><td colspan='2'>Erro ao carregar</td></tr>";
+    }
+}
+
+async function gerarPDFTurmasProfessor() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const res = await fetch("http://localhost:3000/turma");
+    const turmas = await res.json();
+
+    const data = turmas.map(t => [t.id_turma, t.descricao]);
+
+    doc.text("Turmas", 14, 20);
+
+    doc.autoTable({
+        head: [["ID", "Descrição"]],
+        body: data,
+        startY: 30
+    });
+
+    doc.save("turmas-professor.pdf");
+}
+async function deletarProfessor(id){
+    if(!confirm("Deseja deletar este professor?")) return;
+
+    try {
+        const res = await fetch(`http://localhost:3000/professor/${id}`, {
+            method: "DELETE"
+        });
+
+        if(res.ok){
+            alert("Professor deletado!");
+            carregarTabelaProfessores();
+        } else {
+            alert("Erro ao deletar professor");
+        }
+
+    } catch(e){
+        console.error(e);
+        alert("Erro de conexão");
+    }
+}
+
+async function gerarPDFProfessoresAdmin(){
+    try {
+        const res = await fetch("http://localhost:3000/professor");
+        const professores = await res.json();
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        doc.setFontSize(18);
+        doc.text("Relatório de Professores", 14, 20);
+
+        const headers = [["ID", "Nome", "Email", "Disciplina"]];
+
+        const data = professores.map(p => [
+            p.id_professor,
+            p.nome,
+            p.email,
+            p.nome_disciplina || "Geral"
+        ]);
+
+        doc.autoTable({
+            head: headers,
+            body: data,
+            startY: 30
+        });
+
+        doc.save("professores.pdf");
+
+    } catch(e){
+        console.error(e);
+        alert("Erro ao gerar PDF dos professores");
+    }
+}
+
+</script>
+</head>
+<body>
+    <div class="overlay"></div>
+    
+    <div class="container" id="main-container">
+        <header id="header-login">
+            <div class="logo-placeholder">EEEP PADRE JOÃO BOSCO DE LIMA</div>
+            <h1>Sistema de Ocorrências Escolares</h1>
+        </header>
+
+        <div id="login-prof" class="card">
+            <h2>Login do Professor</h2>
+            <form onsubmit="realizarLogin(event, 'professor')">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="login-email" placeholder="Digite seu e-mail" required>
+                </div>
+                <div class="form-group">
+                    <label>Senha</label>
+                    <div class="input-icon-wrapper">
+                        <input type="password" id="login-senha" placeholder="Sua senha" required>
+                        <span class="toggle-eye" onclick="toggleSenha('login-senha')">👁️</span>
+                    </div>
+                </div>
+                <button class="btn-primary" type="submit">ENTRAR</button>
+            </form>
+            <div class="form-footer">
+                <a href="#" onclick="mostrarTela('login-admin')">Acesso Administrativo</a>
+            </div>
+        </div>
+
+        <div id="login-admin" class="card" style="display:none">
+            <h2>Login do Administrador</h2>
+            <form onsubmit="realizarLogin(event, 'administrador')">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="login-email-admin" placeholder="admin@escola.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Senha</label>
+                    <div class="input-icon-wrapper">
+                        <input type="password" id="login-senha-admin" placeholder="Senha master" required>
+                        <span class="toggle-eye" onclick="toggleSenha('login-senha-admin')">👁️</span>
+                    </div>
+                </div>
+                <button class="btn-primary" type="submit">ENTRAR NO PAINEL</button>
+            </form>
+            <button class="btn-voltar" onclick="mostrarTela('login-prof')">Voltar</button>
+        </div>
+
+        <div id="cadastro-prof" class="card" style="display:none">
+            <h2>Cadastrar Professor</h2>
+            <form onsubmit="cadastrarNovoProfessor(event)">
+                <div class="form-group">
+                    <label>Nome Completo</label>
+                    <input type="text" id="reg-nome" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="reg-email" required>
+                </div>
+             <div class="form-group">
+    <label>Disciplina</label>
+    <select id="adm-prof-disciplina" required>
+        <option value="">Carregando disciplinas...</option>
+    </select>
+</div>
+                <div class="form-group">
+                    <label>Senha</label>
+                    <div class="input-icon-wrapper">
+                        <input type="password" id="reg-senha" required>
+                        <span class="toggle-eye" onclick="toggleSenha('reg-senha')">👁️</span>
+                    </div>
+                </div>
+                <button class="btn-primary" type="submit">CADASTRAR</button>
+            </form>
+            <button class="btn-voltar" onclick="mostrarTela('login-prof')">Voltar</button>
+        </div>
+
+<div id="painel-interno" style="display:none">
+
+    <div class="menu-icon" onclick="toggleMenu()">
+        <span></span><span></span><span></span>
+    </div>
+
+    <nav id="menu-lateral" class="sidebar">
+        <div class="sidebar-header">GERENCIAMENTO</div>
+        <ul>
+            <li onclick="navegarPara('tela-inicio')">Início</li>
+            <li onclick="navegarPara('tela-cadastrar')">Cadastrar Turma</li>
+            <li onclick="navegarPara('tela-ver-turmas')">Ver Turmas</li>
+            <li onclick="navegarPara('tela-cadastrar-prof')">Cadastrar Professor</li>
+            <li onclick="navegarPara('tela-ver-professores')">Ver Professores</li>
+            <li onclick="navegarPara('tela-cadastrar-disciplina')">Cadastrar Disciplina</li>
+            <li onclick="navegarPara('tela-ver-disciplinas')">Ver Disciplinas</li>
+            <li onclick="navegarPara('tela-cadastrar-admin')">Cadastrar Administrador</li>
+            <li onclick="navegarPara('tela-ver-admins')">Ver Administradores</li>
+            <li onclick="window.location.reload()">Sair</li>
+        </ul>
+    </nav>
+
+    <div class="main-content-admin">
+
+        <header class="admin-header-center">
+            <h1 class="panel-title">PAINEL DE CONTROLE</h1>
+            <p>Olá, <span id="nome-usuario"></span></p>
+        </header>
+
+        <!-- INÍCIO -->
+        <div id="tela-inicio" class="tela-admin" style="display:block;">
+        </div>
+
+        <!-- CADASTRAR TURMA -->
+        <div id="tela-cadastrar" class="tela-admin" style="display:none;">
+            <div class="card-form">
+                <h3 style="color:#00441b;">Cadastrar Nova Turma</h3>
+                <form onsubmit="cadastrarTurma(event)">
+                    <div class="form-group">
+                        <label>Descrição da Turma</label>
+                        <input type="text" id="descricao" required>
+                    </div>
+                    <button class="btn-primary">SALVAR TURMA</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- VER TURMAS -->
+        <div id="tela-ver-turmas" class="tela-admin" style="display:none;">
+            <div class="card-pag-inteira">
+                <h3 style="color:#00441b;">Turmas Registradas</h3>
+
+                <div class="tabela-responsiva">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Descrição</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpo-tabela-turmas"></tbody>
+                    </table>
+                </div>
+
+                <div class="rodape-acoes">
+                   <button class="btn-refresh" onclick="mostrarTurmasAdmin()">🔄</button>
+                    <button class="btn-pdf" onclick="gerarPDFTurmasAdmin()">📄 Gerar PDF</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CADASTRAR PROFESSOR -->
+        <div id="tela-cadastrar-prof" class="tela-admin" style="display:none;">
+            <div class="card-form">
+                <h3 style="color:#00441b;">Cadastrar Professor</h3>
+                <form onsubmit="cadastrarProfessorAdmin(event)">
+                    <div class="form-group">
+                        <label>Nome</label>
+                        <input type="text" id="adm-prof-nome" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="adm-prof-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Disciplina</label>
+                        <select id="adm-prof-disciplina-painel" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Senha</label>
+                        <input type="password" id="adm-prof-senha" required>
+                    </div>
+                    <button class="btn-primary">SALVAR PROFESSOR</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- VER PROFESSORES -->
+        <div id="tela-ver-professores" class="tela-admin" style="display:none;">
+            <div class="card-pag-inteira">
+                <h3 style="color:#00441b;">Professores</h3>
+
+                <div class="tabela-responsiva">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome</th>
+                                <th>Email</th>
+                                <th>Disciplina</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpo-tabela-professores"></tbody>
+                    </table>
+                </div>
+
+                <div class="rodape-acoes">
+                   <button class="btn-refresh" onclick="carregarTabelaProfessores()">🔄</button>
+                    <button class="btn-pdf" onclick="gerarPDFProfessoresAdmin()">📄 Gerar PDF</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CADASTRAR DISCIPLINA -->
+        <div id="tela-cadastrar-disciplina" class="tela-admin" style="display:none;">
+            <div class="card-form">
+                <h3 style="color:#00441b;">Cadastrar Disciplina</h3>
+                <form onsubmit="cadastrarDisciplina(event)">
+                    <div class="form-group">
+                        <label>Selecione a disciplina</label>
+                        <select id="disc-descricao" required>
+                            <option value="">Selecione</option>
+                            <option>Português</option>
+                            <option>Matemática</option>
+                            <option>Física</option>
+                            <option>Química</option>
+                            <option>Biologia</option>
+                            <option>História</option>
+                            <option>Geografia</option>
+                            <option>Sociologia</option>
+                            <option>Filosofia</option>
+                            <option>Inglês</option>
+                            <option>Espanhol</option>
+                            <option>Educação Física</option>
+                            <option>Artes</option>
+                        </select>
+                    </div>
+                    <button class="btn-primary">SALVAR</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- VER DISCIPLINAS -->
+        <div id="tela-ver-disciplinas" class="tela-admin" style="display:none;">
+            <div class="card-pag-inteira">
+                <h3 style="color:#00441b;">Disciplinas</h3>
+
+                <div class="tabela-responsiva">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpo-tabela-disciplinas"></tbody>
+                    </table>
+                </div>
+
+                <div class="rodape-acoes">
+                    <button class="btn-refresh" onclick="carregarTabelaDisciplinas()">🔄</button>
+                    <button class="btn-pdf" onclick="gerarPDFDisciplinas()">📄 Gerar PDF</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CADASTRAR ADMIN -->
+        <div id="tela-cadastrar-admin" class="tela-admin" style="display:none;">
+            <div class="card-form">
+                <h3 style="color:#00441b;">Cadastrar Administrador</h3>
+                <form onsubmit="cadastrarAdminPainel(event)">
+                    <div class="form-group">
+                        <label>Nome</label>
+                        <input type="text" id="adm-nome-painel" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="adm-email-painel" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Senha</label>
+                        <input type="password" id="adm-senha-painel" required>
+                    </div>
+                    <button class="btn-primary">SALVAR ADMIN</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- VER ADMINS -->
+        <div id="tela-ver-admins" class="tela-admin" style="display:none;">
+            <div class="card-pag-inteira">
+                <h3 style="color:#00441b;">Administradores</h3>
+
+                <div class="tabela-responsiva">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome</th>
+                                <th>Email</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpo-tabela-admins"></tbody>
+                    </table>
+                </div>
+
+                <div class="rodape-acoes">
+                    <button class="btn-refresh" onclick="carregarTabelaAdmins()">🔄</button>
+                    <button class="btn-pdf" onclick="gerarPDFAdmins()">📄 Gerar PDF</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div id="painel-professor" style="display:none">
+
+    <div class="menu-icon" onclick="toggleMenu()">
+        <span></span><span></span><span></span>
+    </div>
+
+    <nav id="menu-lateral-prof" class="sidebar">
+        <div class="sidebar-header">PROFESSOR</div>
+        <ul>
+            <li onclick="navegarProfessor('tela-prof-inicio')">Início</li>
+            <li onclick="navegarProfessor('tela-prof-turmas')">Ver Turmas</li>
+            <li onclick="window.location.reload()">Sair</li>
+        </ul>
+    </nav>
+
+    <div class="main-content-admin">
+
+        <!-- HEADER IGUAL AO ADMIN -->
+        <header class="admin-header-center">
+            <h1 class="panel-title">PAINEL DO PROFESSOR</h1>
+            <p>Olá, <span id="nome-professor"></span></p>
+        </header>
+
+        <!-- INÍCIO -->
+       <div id="tela-prof-inicio" class="tela-prof" style="display:block;">
+</div>
+
+        <!-- VER TURMAS (AGORA BONITO IGUAL ADMIN) -->
+        <div id="tela-prof-turmas" class="tela-prof" style="display:none;">
+            <div class="card-pag-inteira">
+
+                <h3 style="color:#00441b; margin-bottom:20px;">
+                    Turmas Disponíveis
+                </h3>
+
+                <div class="tabela-responsiva">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Descrição</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpo-tabela-turmas-prof"></tbody>
+                    </table>
+                </div>
+
+                <div class="rodape-acoes">
+                    <button class="btn-refresh" onclick="mostrarTurmasProfessor()">🔄</button>
+                    <button class="btn-pdf" onclick="gerarPDFTurmasProfessor()">
+                        📄 Gerar PDF
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>
